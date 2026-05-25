@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>산삼 러너 🌿</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Black+Han+Sans&display=swap');
+
+  :root {
+    --green-deep: #1a3a1a;
+    --green-mid:  #2d6a2d;
+    --green-light:#4a9a4a;
+    --gold:       #c9933a;
+    --gold-light: #f0c060;
+    --cream:      #f5f0e0;
+    --red-berry:  #cc2222;
+    --bg:         #0e1e0e;
+    --panel:      rgba(20,40,20,0.85);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  html, body {
+    width:100%; height:100%;
+    background: var(--bg);
+    font-family: 'Noto Sans KR', sans-serif;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+  }
+
+  /* ── 배경 패턴 ── */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(45,106,45,0.15) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(201,147,58,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 60% 80%, rgba(45,106,45,0.1) 0%, transparent 50%);
+    pointer-events:none;
+  }
+
+  /* ── 레이아웃 ── */
+  #app {
+    width:100%; height:100%;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap: clamp(8px, 2vh, 20px);
+    padding: clamp(8px, 2vh, 20px);
+  }
+
+  /* ── 타이틀 ── */
+  #titleBar {
+    display:flex; align-items:center; gap:12px;
+    animation: fadeDown 0.6s ease;
+  }
+  #titleBar h1 {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: clamp(20px, 5vw, 36px);
+    color: var(--gold-light);
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px rgba(240,192,96,0.4), 2px 2px 0 var(--green-deep);
+  }
+  #titleBar .badge {
+    background: var(--red-berry);
+    color: white;
+    font-size: clamp(9px, 1.8vw, 12px);
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    animation: pulse 2s infinite;
+  }
+
+  /* ── 게임 영역 ── */
+  #gameArea {
+    position: relative;
+    width: 100%;
+    max-width: min(95vw, calc(95vh * 16/9));
+    aspect-ratio: 16/9;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(74,154,74,0.3),
+      0 0 40px rgba(45,106,45,0.3),
+      0 20px 60px rgba(0,0,0,0.6);
+    animation: fadeUp 0.6s ease 0.2s both;
+  }
+
+  canvas {
+    position:absolute; top:0; left:0;
+    width:100%; height:100%;
+    display:block;
+  }
+
+  /* ── 오버레이 UI ── */
+  #hud {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    pointer-events:none;
+    padding: 3% 4%;
+    display:flex; justify-content:space-between; align-items:flex-start;
+  }
+  .hud-box {
+    background: rgba(10,25,10,0.6);
+    border: 1px solid rgba(74,154,74,0.25);
+    border-radius: 8px;
+    padding: clamp(4px,1.2vw,10px) clamp(8px,2vw,16px);
+    backdrop-filter: blur(4px);
+  }
+  .hud-label {
+    font-size: clamp(8px,1.5vw,11px);
+    color: var(--green-light);
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .hud-value {
+    font-size: clamp(14px,3.2vw,24px);
+    font-weight: 900;
+    color: var(--gold-light);
+    line-height: 1.1;
+    font-family: 'Black Han Sans', sans-serif;
+  }
+  .hud-speed {
+    font-size: clamp(9px,1.8vw,13px);
+    color: rgba(240,192,96,0.6);
+    margin-top: 1px;
+  }
+
+  /* ── 메시지 오버레이 ── */
+  #msgOverlay {
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap: clamp(6px,1.5vw,12px);
+    background: rgba(5,15,5,0.7);
+    backdrop-filter: blur(2px);
+  }
+  #msgOverlay .msg-icon {
+    font-size: clamp(28px,7vw,52px);
+    animation: bounce 0.6s ease;
+  }
+  #msgOverlay .msg-title {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: clamp(16px,4vw,30px);
+    color: var(--gold-light);
+    text-shadow: 0 0 20px rgba(240,192,96,0.5);
+    text-align:center;
+  }
+  #msgOverlay .msg-sub {
+    font-size: clamp(10px,2.2vw,15px);
+    color: rgba(200,220,200,0.7);
+    text-align:center;
+  }
+  #msgOverlay .msg-hint {
+    margin-top: 4px;
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:center;
+  }
+  #msgOverlay .key-badge {
+    background: rgba(74,154,74,0.2);
+    border: 1px solid rgba(74,154,74,0.4);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: clamp(9px,1.8vw,12px);
+    color: var(--green-light);
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  /* ── 하단 안내 ── */
+  #footer {
+    font-size: clamp(9px, 1.8vw, 13px);
+    color: rgba(74,154,74,0.5);
+    letter-spacing: 1px;
+    animation: fadeUp 0.6s ease 0.4s both;
+  }
+  #footer span { color: rgba(240,192,96,0.5); }
+
+  /* ── 애니메이션 ── */
+  @keyframes fadeDown { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeUp   { from{opacity:0;transform:translateY(16px)}  to{opacity:1;transform:translateY(0)} }
+  @keyframes bounce   { 0%,100%{transform:scale(1)} 50%{transform:scale(1.2)} }
+  @keyframes pulse    { 0%,100%{opacity:1} 50%{opacity:0.6} }
+  @keyframes flash    { 0%,100%{opacity:0} 50%{opacity:1} }
+
+  .blink { animation: flash 0.8s infinite; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="titleBar">
+    <h1>🌿 산삼 러너</h1>
+    <span class="badge">PLAY</span>
+  </div>
+
+  <div id="gameArea">
+    <canvas id="gc"></canvas>
+
+    <div id="hud">
+      <div class="hud-box">
+        <div class="hud-label">SCORE</div>
+        <div class="hud-value" id="scoreVal">0</div>
+        <div class="hud-speed" id="speedVal">SPEED ×1.0</div>
+      </div>
+      <div class="hud-box" style="text-align:right">
+        <div class="hud-label">최고 기록</div>
+        <div class="hud-value" id="hiVal">0</div>
+      </div>
+    </div>
+
+    <div id="msgOverlay">
+      <div class="msg-icon" id="msgIcon">🌿</div>
+      <div class="msg-title" id="msgTitle">산삼 러너</div>
+      <div class="msg-sub" id="msgSub">바이러스를 피해 달려라!</div>
+      <div class="msg-hint">
+        <span class="key-badge">SPACE</span>
+        <span class="key-badge">TAP</span>
+        <span class="key-badge">터치</span>
+        <span class="key-badge blink" id="startHint">눌러서 시작</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="footer">2단 점프 가능 &nbsp;·&nbsp; <span>진산삼바이오</span> × 산삼 러너</div>
+</div>
+
+<script>
+// ── 캔버스 설정 ──────────────────────────────────────────────────────────
+const gameArea = document.getElementById('gameArea');
+const canvas   = document.getElementById('gc');
+const ctx      = canvas.getContext('2d');
+
+const BASE_W = 480, BASE_H = 270;
+canvas.width  = BASE_W;
+canvas.height = BASE_H;
+
+const scoreEl = document.getElementById('scoreVal');
+const hiEl    = document.getElementById('hiVal');
+const speedEl = document.getElementById('speedVal');
+const overlay = document.getElementById('msgOverlay');
+const msgIcon  = document.getElementById('msgIcon');
+const msgTitle = document.getElementById('msgTitle');
+const msgSub   = document.getElementById('msgSub');
+const startHint= document.getElementById('startHint');
+
+// ── 상수 ─────────────────────────────────────────────────────────────────
+const GY       = BASE_H - 22;
+const BASE_SPD = 300;
+const GRAVITY  = 900;
+const JUMP_V   = -420;
+
+// ── 상태 ─────────────────────────────────────────────────────────────────
+let state = 'idle';
+let scoreTime = 0, hiScore = 0, elapsed = 0, lastTs = null;
+let speed = BASE_SPD;
+let groundOffset = 0;
+
+// ── 플레이어 ──────────────────────────────────────────────────────────────
+const P = { x:60, y:GY, w:32, h:44, vy:0, onGround:true, jumpCount:0, lp:0 };
+
+function jump() {
+  if (state === 'idle') {
+    state = 'running';
+    overlay.style.display = 'none';
+    lastTs = null;
+    return;
+  }
+  if (state === 'dead') { restart(); return; }
+  if (P.jumpCount < 2) { P.vy = JUMP_V; P.onGround = false; P.jumpCount++; }
+}
+
+function restart() {
+  scoreTime=0; elapsed=0; speed=BASE_SPD; lastTs=null; groundOffset=0;
+  obstacles=[]; spawnTimer=0; nextSpawn=calcNextSpawn();
+  P.y=GY; P.vy=0; P.onGround=true; P.jumpCount=0;
+  clouds=makeClouds();
+  state='running';
+  overlay.style.display='none';
+}
+
+// ── 장애물 ──────────────────────────────────────────────────────────────
+const VLIST = [
+  {w:13,h:20,type:'virus', variant:0,yOffset:0},
+  {w:17,h:26,type:'virus', variant:1,yOffset:0},
+  {w:20,h:32,type:'cancer',variant:2,yOffset:0},
+  {w:14,h:21,type:'virus', variant:0,yOffset:36},
+  {w:16,h:23,type:'virus', variant:1,yOffset:52},
+];
+let obstacles=[], spawnTimer=0, nextSpawn=1.2;
+
+function calcNextSpawn() {
+  const minT = Math.max(0.5, 0.9  - Math.floor(elapsed/10)*0.05);
+  const maxT = Math.max(1.1, 1.8  - Math.floor(elapsed/10)*0.07);
+  return minT + Math.random()*(maxT-minT);
+}
+
+function spawnObs() {
+  const roll = Math.random();
+  if (roll < 0.25) {
+    const v1=VLIST[Math.floor(Math.random()*3)];
+    const v2=VLIST[Math.floor(Math.random()*3)];
+    obstacles.push({x:BASE_W+8,...v1});
+    obstacles.push({x:BASE_W+8+v1.w+12,...v2});
+  } else if (roll < 0.45) {
+    obstacles.push({x:BASE_W+8,...VLIST[3+Math.floor(Math.random()*2)]});
+  } else {
+    obstacles.push({x:BASE_W+8,...VLIST[Math.floor(Math.random()*3)]});
+  }
+}
+
+// ── 구름 ────────────────────────────────────────────────────────────────
+function makeClouds() {
+  return [
+    {x:100,y:18,r:10,spd:0.6},{x:230,y:12,r:7,spd:0.4},
+    {x:360,y:22,r:11,spd:0.7},{x:440,y:14,r:8,spd:0.5}
+  ];
+}
+let clouds = makeClouds();
+
+// ── 충돌 ────────────────────────────────────────────────────────────────
+function playerHB() {
+  return { x1:P.x+7, y1:P.y-P.h+5, x2:P.x+P.w-7, y2:P.y-5 };
+}
+function obsHB(o) {
+  const ob = GY - o.yOffset;
+  return { x1:o.x+3, y1:ob-o.h+3, x2:o.x+o.w-3, y2:ob-3 };
+}
+function overlap(a,b) {
+  return a.x1<b.x2 && a.x2>b.x1 && a.y1<b.y2 && a.y2>b.y1;
+}
+
+// ── 그리기: 배경 ──────────────────────────────────────────────────────────
+function drawBg() {
+  // 하늘 그라디언트
+  const sky = ctx.createLinearGradient(0,0,0,GY);
+  sky.addColorStop(0, '#0a1a0a');
+  sky.addColorStop(1, '#1a3020');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, BASE_W, GY);
+
+  // 별
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  const stars = [[40,15],[120,8],[200,20],[280,5],[380,18],[460,10],[30,30],[160,35],[320,28],[430,38]];
+  stars.forEach(([sx,sy]) => {
+    ctx.beginPath(); ctx.arc(sx, sy, 0.8, 0, Math.PI*2); ctx.fill();
+  });
+}
+
+function drawGround() {
+  // 땅 채우기
+  const grd = ctx.createLinearGradient(0, GY, 0, BASE_H);
+  grd.addColorStop(0, '#1a2e0a');
+  grd.addColorStop(1, '#0e1a06');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, GY, BASE_W, BASE_H - GY);
+
+  // 지면 라인
+  ctx.strokeStyle = 'rgba(74,154,74,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0,GY); ctx.lineTo(BASE_W,GY); ctx.stroke();
+
+  // 달리는 대시
+  ctx.globalAlpha = 0.2;
+  ctx.fillStyle = '#4a9a4a';
+  for (let i=0; i<20; i++) {
+    const bx = ((i*50) - (groundOffset%50) + 50*20) % (BASE_W+20) - 8;
+    ctx.fillRect(bx, GY+3, 20, 1.5);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawCloud(cl) {
+  ctx.save();
+  ctx.fillStyle = '#aaccaa';
+  ctx.globalAlpha = 0.08;
+  ctx.beginPath();
+  ctx.arc(cl.x, cl.y, cl.r, 0, Math.PI*2);
+  ctx.arc(cl.x+cl.r*1.2, cl.y+3, cl.r*0.7, 0, Math.PI*2);
+  ctx.arc(cl.x-cl.r*0.8, cl.y+3, cl.r*0.6, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ── 그리기: 산삼 캐릭터 ──────────────────────────────────────────────────
+function drawSansam() {
+  const px=P.x, py=P.y, pw=P.w, ph=P.h, cx=px+pw/2;
+  const onG=P.onGround, lp=P.lp;
+  ctx.save();
+
+  // 다리
+  const legSw = onG ? Math.sin(lp*3)*4 : 0;
+  ctx.fillStyle = '#E8C97A';
+  ctx.beginPath(); ctx.ellipse(cx-pw*0.17+(onG?-legSw*0.3:-3), py-5, 5,8, onG?legSw*0.04:-0.2, 0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+pw*0.17+(onG? legSw*0.3: 3), py-5, 5,8, onG?-legSw*0.04:0.2, 0,Math.PI*2); ctx.fill();
+
+  // 몸통
+  const bY=py-ph*0.42, bRx=pw*0.46, bRy=ph*0.36;
+  ctx.fillStyle='#D4A85A';
+  ctx.beginPath(); ctx.ellipse(cx+1,bY+1.5,bRx,bRy,0,0,Math.PI*2); ctx.fill();
+  const bg=ctx.createRadialGradient(cx-4,bY-6,2,cx,bY,bRx*1.1);
+  bg.addColorStop(0,'#F5DFA0'); bg.addColorStop(0.6,'#EDD080'); bg.addColorStop(1,'#C9933A');
+  ctx.fillStyle=bg;
+  ctx.beginPath(); ctx.ellipse(cx,bY,bRx,bRy,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='rgba(160,100,30,0.18)'; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.moveTo(cx-6,bY+bRy*0.3); ctx.quadraticCurveTo(cx,bY+bRy*0.5,cx+6,bY+bRy*0.3); ctx.stroke();
+
+  // 팔
+  const armW = onG ? Math.sin(lp*2)*5 : 0;
+  ctx.fillStyle='#E8C97A';
+  ctx.beginPath(); ctx.ellipse(cx-pw*0.5, bY+ph*0.08, 5,10, 0.4, 0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx-pw*0.52, bY+ph*0.18, 4, 0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+pw*0.48, bY-ph*0.15+armW, 5,10, -0.5, 0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx+pw*0.49, bY-ph*0.26+armW, 4, 0,Math.PI*2); ctx.fill();
+
+  // 머리
+  const hY=py-ph*0.8, hR=pw*0.36;
+  ctx.fillStyle='#D4A85A';
+  ctx.beginPath(); ctx.arc(cx+1,hY+1.5,hR,0,Math.PI*2); ctx.fill();
+  const hg=ctx.createRadialGradient(cx-4,hY-5,2,cx,hY,hR*1.2);
+  hg.addColorStop(0,'#F5DFA0'); hg.addColorStop(0.6,'#EDD080'); hg.addColorStop(1,'#C9933A');
+  ctx.fillStyle=hg;
+  ctx.beginPath(); ctx.arc(cx,hY,hR,0,Math.PI*2); ctx.fill();
+
+  // 표정
+  const eY=hY-1;
+  ctx.fillStyle='#3a2005';
+  ctx.beginPath(); ctx.arc(cx-5,eY,3.8,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white';
+  ctx.beginPath(); ctx.arc(cx-4,eY-1,1.4,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#3a2005';
+  ctx.beginPath(); ctx.arc(cx+5,eY,3.8,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white';
+  ctx.beginPath(); ctx.arc(cx+6,eY-1,1.4,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(240,120,100,0.3)';
+  ctx.beginPath(); ctx.ellipse(cx-10,eY+4,5,3,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+10,eY+4,5,3,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#3a2005'; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.arc(cx,eY+5,4,0.1,Math.PI-0.1); ctx.stroke();
+
+  // 줄기 & 잎
+  const sbX=cx-1, sbY=hY-hR+1;
+  ctx.strokeStyle='#4a7a2a'; ctx.lineWidth=2; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(sbX,sbY); ctx.quadraticCurveTo(sbX-2,sbY-10,sbX-1,sbY-18); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sbX-1,sbY-10); ctx.quadraticCurveTo(sbX-12,sbY-15,sbX-16,sbY-21); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sbX-1,sbY-10); ctx.quadraticCurveTo(sbX+11,sbY-14,sbX+15,sbY-20); ctx.stroke();
+
+  function leaf(lx,ly,ang,sz){
+    ctx.save(); ctx.translate(lx,ly); ctx.rotate(ang);
+    ctx.fillStyle='#4a8a2a';
+    ctx.beginPath(); ctx.ellipse(0,0,sz*0.45,sz*0.28,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(60,120,20,0.35)'; ctx.lineWidth=0.6;
+    ctx.beginPath(); ctx.moveTo(-sz*0.4,0); ctx.lineTo(sz*0.4,0); ctx.stroke();
+    ctx.restore();
+  }
+  leaf(sbX-1,sbY-18,0,14); leaf(sbX-16,sbY-21,-0.5,13); leaf(sbX+15,sbY-20,0.5,12);
+  leaf(sbX-7,sbY-14,-0.8,10); leaf(sbX+7,sbY-13,0.8,9);
+
+  // 열매
+  const bpos=[{x:sbX-1,y:sbY-24},{x:sbX-6,y:sbY-26},{x:sbX+5,y:sbY-25},{x:sbX-3,y:sbY-29},{x:sbX+2,y:sbY-29}];
+  bpos.forEach((b,i)=>{
+    ctx.fillStyle=['#cc2222','#dd3333','#bb1111'][i%3];
+    ctx.beginPath(); ctx.arc(b.x,b.y,2.4,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.4)';
+    ctx.beginPath(); ctx.arc(b.x-0.8,b.y-0.8,0.9,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#4a7a2a'; ctx.lineWidth=0.7;
+    ctx.beginPath(); ctx.moveTo(b.x,b.y+2.4); ctx.lineTo(b.x,b.y+5); ctx.stroke();
+  });
+
+  ctx.restore();
+}
+
+// ── 그리기: 바이러스 / 암세포 ────────────────────────────────────────────
+function drawVirus(o) {
+  const cx=o.x+o.w/2, ob=GY-o.yOffset, cy=ob-o.h/2, sz=o.w;
+  const pulse=Math.sin(elapsed*7)*1;
+  ctx.save();
+  if (o.type==='cancer') {
+    ctx.fillStyle='#8B2252';
+    ctx.beginPath();
+    for(let i=0;i<16;i++){
+      const a=(i/16)*Math.PI*2, r=i%2===0?sz*0.55+pulse:sz*0.32;
+      i===0?ctx.moveTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r):ctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#6B1842';
+    ctx.beginPath(); ctx.arc(cx,cy,sz*0.22,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#c44a82'; ctx.lineWidth=1;
+    for(let i=0;i<6;i++){
+      const a=(i/6)*Math.PI*2, r1=sz*0.55+pulse;
+      ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);
+      ctx.lineTo(cx+Math.cos(a)*(r1+4),cy+Math.sin(a)*(r1+4)); ctx.stroke();
+    }
+  } else {
+    const bR=sz*0.42+pulse;
+    ctx.fillStyle=o.variant===0?'#2a6cb5':'#1a5a9e';
+    ctx.beginPath(); ctx.arc(cx,cy,bR,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle=o.variant===0?'#4a8fd5':'#3a7fc5'; ctx.lineWidth=1.5;
+    for(let i=0;i<10;i++){
+      const a=(i/10)*Math.PI*2+elapsed*1.8;
+      ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*bR,cy+Math.sin(a)*bR);
+      ctx.lineTo(cx+Math.cos(a)*(bR+4.5),cy+Math.sin(a)*(bR+4.5)); ctx.stroke();
+      ctx.fillStyle='#74b3f5';
+      ctx.beginPath(); ctx.arc(cx+Math.cos(a)*(bR+5.5),cy+Math.sin(a)*(bR+5.5),2,0,Math.PI*2); ctx.fill();
+    }
+    ctx.fillStyle='#1a4a8a';
+    ctx.beginPath(); ctx.arc(cx,cy,bR*0.45,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ── 게임 루프 (delta time) ────────────────────────────────────────────────
+function loop(ts) {
+  let dt = 0;
+  if (lastTs !== null) { dt = (ts - lastTs)/1000; if(dt>0.1) dt=0.1; }
+  lastTs = ts;
+
+  // 배경
+  drawBg();
+  clouds.forEach(cl => drawCloud(cl));
+  drawGround();
+
+  if (state === 'running') {
+    elapsed   += dt;
+    scoreTime += dt;
+
+    speed = Math.min(780, BASE_SPD + Math.floor(elapsed/10)*40);
+    // 표기: 시작 ×1.0, 10초마다 +0.27씩 증가 (실제 속도는 그대로 유지)
+    const displayMult = (1.0 + (speed - BASE_SPD) / 150).toFixed(1);
+    speedEl.textContent = `SPEED ×${displayMult}`;
+    scoreEl.textContent  = Math.floor(scoreTime*10);
+
+    // 구름
+    clouds.forEach(cl => { cl.x -= cl.spd*speed*0.018*dt*60; if(cl.x<-50) cl.x=BASE_W+50; });
+    groundOffset += speed*dt;
+
+    // 스폰
+    spawnTimer += dt;
+    if (spawnTimer >= nextSpawn) { spawnObs(); spawnTimer=0; nextSpawn=calcNextSpawn(); }
+
+    // 장애물 이동
+    obstacles.forEach(o => o.x -= speed*dt);
+    obstacles = obstacles.filter(o => o.x > -60);
+
+    // 물리
+    if (!P.onGround) { P.vy += GRAVITY*dt; P.y += P.vy*dt; }
+    if (P.y >= GY)   { P.y=GY; P.vy=0; P.onGround=true; P.jumpCount=0; }
+    P.lp += (speed/BASE_SPD)*0.18*dt*60;
+
+    // 충돌
+    const ph = playerHB();
+    for (const o of obstacles) {
+      if (overlap(ph, obsHB(o))) {
+        state = 'dead';
+        hiScore = Math.max(hiScore, Math.floor(scoreTime*10));
+        hiEl.textContent = String(hiScore);
+        msgIcon.textContent  = '💔';
+        msgTitle.textContent = '피격! 산삼이 쓰러졌어요';
+        msgSub.textContent   = `점수: ${Math.floor(scoreTime*10)}`;
+        startHint.textContent= '다시 시작';
+        startHint.classList.add('blink');
+        overlay.style.display = 'flex';
+        break;
+      }
+    }
+  }
+
+  obstacles.forEach(o => drawVirus(o));
+  drawSansam();
+
+  if (state==='dead') {
+    ctx.save(); ctx.fillStyle='rgba(140,20,20,0.08)'; ctx.fillRect(0,0,BASE_W,BASE_H); ctx.restore();
+  }
+
+  requestAnimationFrame(loop);
+}
+
+// ── 입력 ──────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (['Space','Tab','ArrowUp'].includes(e.code)) { e.preventDefault(); jump(); }
+});
+// 게임 영역 밖 포함 전체 화면 어디서든 터치/클릭으로 점프
+document.addEventListener('click', jump);
+document.addEventListener('touchstart', e => { e.preventDefault(); jump(); }, {passive:false});
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
